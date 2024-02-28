@@ -1,0 +1,4 @@
+-------------------------------------------------------------------------------
+Test set: com.pra1.api.ApiApplicationTests
+-------------------------------------------------------------------------------
+Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 2.432 s -- in com.pra1.api.ApiApplicationTests
