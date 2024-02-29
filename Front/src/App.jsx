@@ -1,10 +1,24 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import toast, { Toaster } from "react-hot-toast";
+import Service from './Service/Service';
 function App() {
   const [isDragging, setIsDragging] = useState(false);
   const [nameFile, setNameFile] = useState('Arrastra tu imagen acá');
   const [imagen, setImagen] = useState(null);
   const [imageSrc, setImageSrc] = useState(null);
+  const [adulto, setAdulto] = useState(0);
+  const [parodia, setParodia] = useState(0);
+  const [medico, setMedico] = useState(0);
+  const [violencia, setViolencia] = useState(0);
+  const [picante, setPicante] = useState(0);
+  const [rostros, setRostros] = useState(0);
+  const [blur, setBlur] = useState(false);
+  const [caras, setCaras] = useState([]);
+  const [mensaje, setMensaje] = useState(false);
+  const [aceptado, setAceptado] = useState(false);
+
+  const canvasRef = useRef(null);
+
   const handleFileUpload = (event) => {
     const file = event.target.files[0];
     const allowedTypes = ['image/png', 'image/jpeg'];
@@ -12,6 +26,15 @@ function App() {
       console.log('Archivo cargado:', file);
       setNameFile(file.name);
       setImagen(file);
+      setBlur(false);
+      setCaras([]);
+      setAdulto(0);
+      setParodia(0);
+      setMedico(0);
+      setViolencia(0);
+      setPicante(0);
+      setRostros(0);
+      setMensaje(false);
       fileToBase64(file)
       .then((result) => {
         setImageSrc(result);
@@ -45,6 +68,15 @@ function App() {
       setNameFile(file.name);
       setImagen(file);
       console.log('Archivo cargado:', file);
+      setBlur(false);
+      setCaras([]);
+      setAdulto(0);
+      setParodia(0);
+      setMedico(0);
+      setViolencia(0);
+      setPicante(0);
+      setRostros(0);
+      setMensaje(false);
       fileToBase64(file)
       .then((result) => {
         setImageSrc(result);
@@ -72,15 +104,82 @@ function App() {
 
 
   const AnalizarImagen = () => {
-    
+    const fd = new FormData();
+    fd.append('file', imagen);
+    Service.analizar(fd)
+    .then((response) => {
+      console.log(response);
+      const data = response.data;
+      setRostros(data.cantidad_caras);
+      const contenido = data.contenido;
+      setAdulto(contenido.adulto);
+      setParodia(contenido.parodia);
+      setMedico(contenido.medico);
+      setViolencia(contenido.violencia);
+      setPicante(contenido.picante);
+      if(contenido.violencia > 59){
+        setBlur(true);
+      }else if(contenido.picante > 50){
+        setBlur(true);
+      }else if(contenido.adulto > 40){
+        setBlur(true);
+      }else{
+        setBlur(false);
+      }
+      const sumatoria = contenido.violencia + contenido.picante +  contenido.adulto;
+      if(sumatoria > 45){
+        setMensaje(true);
+        setAceptado(false);
+      }else{
+        setMensaje(true);
+        setAceptado(true);
+      }
+      const caras = data.caras;
+      setCaras(caras);
+      setCuadros(data.caras);
+    })
+    .catch((error) => {
+      console.log(error);
+    });
   }
+
+  useEffect(() => {
+    if(imageSrc){
+      const canvas = canvasRef.current;
+      const ctx = canvas.getContext('2d');
+      const img = new Image();
+      img.src = imageSrc;
+      img.onload = () => {
+        canvas.width = img.width;
+        canvas.height = img.height;
+        ctx.drawImage(img, 0, 0);
+        if (blur) {
+          ctx.filter = "blur(5px)";
+          ctx.drawImage(canvas, 0, 0);
+          ctx.filter = "none";
+        }
+        caras.forEach(cara => {
+          const cuadro = cara.cuadro;
+          ctx.strokeStyle = 'green';
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          ctx.moveTo(cuadro[0].x, cuadro[0].y);
+          for (let i = 1; i < 4; i++) {
+            ctx.lineTo(cuadro[i].x, cuadro[i].y);
+          }
+          ctx.closePath();
+          ctx.stroke();
+        });
+      };
+    }
+  }, [imageSrc, blur, caras]);
 
   return (
     <>
     <Toaster
     position="bottom-center"
     reverseOrder={false}/>
-      <nav class="bg-gray-900 border-gray-200">
+      <nav class="bg-gray-800 border-gray-200">
         <div class="max-w-screen-xl flex flex-wrap items-center justify-between mx-auto p-4">
           <div class="flex items-center space-x-3 rtl:space-x-reverse">
             <span class="self-center text-xl font-semibold whitespace-nowrap text-white">
@@ -126,34 +225,59 @@ function App() {
             </div>
             <button type="button" class="text-white bg-gray-800 hover:bg-gray-900 focus:outline-none focus:ring-4 focus:ring-gray-300 font-medium rounded-lg text-sm px-5 py-2.5 me-2 mb-2 dark:bg-gray-800 dark:hover:bg-gray-700 dark:focus:ring-gray-700 dark:border-gray-700 mt-3 ml-3" onClick={AnalizarImagen}>Analizar Imagen</button>
             <h1 className="font-semibold text-white text-xl mt-3">Resultados:</h1>
+            {mensaje && (
+              <>
+              {aceptado ? (
+                <div class="mx-auto flex justify-center items-center mt-3">
+                  <a class="block max-w-sm p-6 bg-green-700 border border-gray-200 rounded-lg shadow hover:bg-gray-100  dark:border-gray-700 dark:hover:bg-gray-700">
+                    <h5 className="mb-2 text-2xl font-semibold tracking-tight text-white text-center">Imagen valida</h5>
+                  </a>
+                </div>
+              ):(
+                <div class="mx-auto flex justify-center items-center mt-3">
+                  <a class="block max-w-sm p-6 bg-red-700 border border-gray-200 rounded-lg shadow hover:bg-gray-100  dark:border-gray-700 dark:hover:bg-gray-700">
+                    <h5 className="mb-2 text-2xl font-semibold tracking-tight text-white text-center">Imagen NO apta para la institución</h5>
+                  </a>
+                </div>
+              
+              )
+              }
+              </>
+            )}
+            <div class="mx-auto flex justify-center items-center mt-3">
+              <a class="block max-w-sm p-6 bg-white border border-gray-200 rounded-lg shadow hover:bg-gray-100 dark:bg-gray-800 dark:border-gray-700 dark:hover:bg-gray-700">
+                  <h5 class="mb-2 text-3xl font-semibold tracking-tight text-gray-900 dark:text-white">Cantidad de rostros</h5>
+                  <p class="font-bold text-white items-center justify-center text-center text-3xl">{rostros}</p>
+              </a>
+            </div>
             <div className="mt-3">
-              <div class="mb-1 text-base font-medium dark:text-white">Adulto</div>
-              <div class="w-full bg-gray-200 rounded-full h-2.5 mb-4 dark:bg-gray-700">
-                <div class="bg-gray-600 h-2.5 rounded-full dark:bg-gray-300" style={{ width: '45%' }}></div>
+              <div class="mb-1 text-lg font-medium dark:text-white">Adulto</div>
+              <div class="w-full bg-gray-200 rounded-full dark:bg-gray-700">
+                <div class="bg-green-600 text-xs font-medium text-blue-100 text-center p-0.5 leading-none rounded-full" style={{ width: adulto + '%' }}>{adulto + '%'}</div>
               </div>
-              <div class="mb-1 text-base font-medium dark:text-white">Parodia</div>
-              <div class="w-full bg-gray-200 rounded-full h-2.5 mb-4 dark:bg-gray-700">
-                <div class="bg-gray-600 h-2.5 rounded-full dark:bg-gray-300" style={{ width: '45%' }}></div>
+              <div class="mb-1 text-lg font-medium dark:text-white">Parodia</div>
+              <div class="w-full bg-gray-200 rounded-full dark:bg-gray-700">
+                <div class="bg-purple-600 text-xs font-medium text-blue-100 text-center p-0.5 leading-none rounded-full" style={{ width: parodia + '%' }}>{parodia + '%'}</div>
               </div>
-              <div class="mb-1 text-base font-medium dark:text-white">Médico</div>
-              <div class="w-full bg-gray-200 rounded-full h-2.5 mb-4 dark:bg-gray-700">
-                <div class="bg-gray-600 h-2.5 rounded-full dark:bg-gray-300" style={{ width: '45%' }}></div>
+              <div class="mb-1 text-lg font-medium dark:text-white">Médico</div>
+              <div class="w-full bg-gray-200 rounded-full dark:bg-gray-700">
+                <div class="bg-teal-600 text-xs font-medium text-blue-100 text-center p-0.5 leading-none rounded-full" style={{ width: medico + '%' }}>{medico + '%'}</div>
               </div>
-              <div class="mb-1 text-base font-medium dark:text-white">Violencia</div>
-              <div class="w-full bg-gray-200 rounded-full h-2.5 mb-4 dark:bg-gray-700">
-                <div class="bg-gray-600 h-2.5 rounded-full dark:bg-gray-300" style={{ width: '45%' }}></div>
+              <div class="mb-1 text-lg font-medium dark:text-white">Violencia</div>
+              <div class="w-full bg-gray-200 rounded-full dark:bg-gray-700">
+                <div class="bg-red-600 text-xs font-medium text-blue-100 text-center p-0.5 leading-none rounded-full" style={{ width: violencia + '%' }}>{violencia + '%'}</div>
               </div>
-              <div class="mb-1 text-base font-medium dark:text-white">Picante</div>
-              <div class="w-full bg-gray-200 rounded-full h-2.5 mb-4 dark:bg-gray-700">
-                <div class="bg-gray-600 h-2.5 rounded-full dark:bg-gray-300" style={{ width: '50%' }}></div>
+              <div class="mb-1 text-lg font-medium dark:text-white">Picante</div>
+              <div class="w-full bg-gray-200 rounded-full dark:bg-gray-700">
+                <div class="bg-orange-600 text-xs font-medium text-blue-100 text-center p-0.5 leading-none rounded-full" style={{ width: picante + '%' }}>{picante + '%'}</div>
               </div>
             </div>
           </div>
-          <div class="flex-1 bg-green-500 p-4 relative">
+          <div class="flex-1 bg-gray-900 p-4 relative">
             {imageSrc ? (
-              <img src={imageSrc} class="m-3 object-cover w-full" alt="Descripción de la imagen" />
+              <canvas ref={canvasRef} className="m-3 object-cover w-full" />
             ) : (
-              <div class="absolute inset-0 flex items-center justify-center text-white">
+              <div class="absolute inset-0 flex items-center justify-center text-white font-bold text-2xl">
                 Tienes que cargar una imagen
               </div>
             )}

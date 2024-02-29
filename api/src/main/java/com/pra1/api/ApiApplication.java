@@ -12,6 +12,8 @@ import com.google.cloud.vision.v1.Image;
 import com.google.cloud.vision.v1.ImageAnnotatorClient;
 import com.google.protobuf.ByteString;
 import org.springframework.context.annotation.ComponentScan;
+import com.pra1.api.config.CorsConfig;
+import org.springframework.web.bind.annotation.CrossOrigin;
 
 import java.nio.file.Files.*;
 import java.nio.file.Path;
