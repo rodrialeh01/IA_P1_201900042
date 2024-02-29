@@ -21,27 +21,7 @@ function App() {
 
   const handleFileUpload = (event) => {
     const file = event.target.files[0];
-    const allowedTypes = ['image/png', 'image/jpeg'];
-    if (file && allowedTypes.includes(file.type)) {
-      console.log('Archivo cargado:', file);
-      setNameFile(file.name);
-      setImagen(file);
-      setBlur(false);
-      setCaras([]);
-      setAdulto(0);
-      setParodia(0);
-      setMedico(0);
-      setViolencia(0);
-      setPicante(0);
-      setRostros(0);
-      setMensaje(false);
-      fileToBase64(file)
-      .then((result) => {
-        setImageSrc(result);
-      })
-    } else {
-      toast.error('El archivo seleccionado no es válido. Por favor, selecciona un archivo de tipo .png o .jpg.');
-    }
+    handleFile(file);
   };
   const handleDragOver = (event) => {
     event.preventDefault();
@@ -51,6 +31,7 @@ function App() {
   const handleDragEnter = (event) => {
     event.preventDefault();
     setIsDragging(true);
+    console.log(event.dataTransfer.files[0])
   };
 
   const handleDragLeave = (event) => {
@@ -61,10 +42,18 @@ function App() {
   const handleDrop = (event) => {
     event.preventDefault();
     setIsDragging(false);
-
+    console.log(event.dataTransfer)
     const file = event.dataTransfer.files[0];
+    handleFile(file);
+  };
+
+  const handleFile = (file) => {
     const allowedTypes = ['image/png', 'image/jpeg'];
-    if (file && allowedTypes.includes(file.type)) {
+    if(!file){
+      toast.error('Hubo un error al cargar la imagen');
+      return;
+    };
+    if (allowedTypes.includes(file.type)) {
       setNameFile(file.name);
       setImagen(file);
       console.log('Archivo cargado:', file);
@@ -91,7 +80,7 @@ function App() {
         },
       });
     }
-  };
+  }
 
   function fileToBase64(file) {
     return new Promise((resolve, reject) => {
@@ -104,6 +93,10 @@ function App() {
 
 
   const AnalizarImagen = () => {
+    if(imagen == null){
+      toast.error('No has seleccionado una imagen');
+      return;
+    }
     const fd = new FormData();
     fd.append('file', imagen);
     Service.analizar(fd)
@@ -136,7 +129,6 @@ function App() {
       }
       const caras = data.caras;
       setCaras(caras);
-      setCuadros(data.caras);
     })
     .catch((error) => {
       console.log(error);
@@ -203,7 +195,9 @@ function App() {
           <div class="w-1/4 bg-blue-500 p-4 overflow-y-auto">
             <h1 className="font-semibold text-white text-xl mb-3">Cargar Imagen:</h1>
             <div
-              className="bg-gray-50 text-center px-4 rounded w-80 flex flex-col items-center justify-center cursor-pointer border-2 border-gray-400 border-dashed mx-auto font-[sans-serif]"
+              className={`bg-gray-50 text-center px-4 rounded w-80 flex flex-col items-center justify-center cursor-pointer border-2 border-gray-400 border-dashed mx-auto font-[sans-serif] ${
+                isDragging ? 'border-blue-500' : ''
+              }`}
               onDragOver={handleDragOver}
               onDragEnter={handleDragEnter}
               onDragLeave={handleDragLeave}
